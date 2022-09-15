@@ -1,0 +1,1 @@
+{"topic":"project.action.billingAccount.update","originator":"project-api","timestamp":"2019-05-14T00:00:00.000Z","mime-type":"application/json","payload":{"projectId":22306,"projectName":"Test dr project","directProjectId":31095,"status":"active","oldBillingAccountId":"80000069","newBillingAccountId":"80000068"}}

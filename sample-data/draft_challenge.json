@@ -1,0 +1,66 @@
+{
+  "phases": [
+    {
+      "duration": 432000,
+      "phaseId": "a93544bc-c165-4af4-b55e-18f3593b457a"
+    },
+    {
+      "duration": 432000,
+      "phaseId": "6950164f-3c5e-4bdc-abc8-22aaf5a1bd49"
+    },
+    {
+      "duration": 172800,
+      "phaseId": "aa5a3f78-79e0-4bf7-93ff-b11e8f5b398b"
+    },
+    {
+      "duration": 86400,
+      "phaseId": "1c24cfb3-5b0a-4dbd-b6bd-4b0dff5349c6"
+    },
+    {
+      "duration": 43200,
+      "phaseId": "797a6af7-cd3f-4436-9fca-9679f773bee9"
+    }
+  ],
+  "typeId": "927abff4-7af9-4145-8ba1-577c16e64e2e",
+  "trackId": "9b6fc876-f4d9-4ccb-9dfd-419247628825",
+  "name": "test dr billing draft challenge",
+  "description": "test spec",
+  "tags": [
+    "JavaScript"
+  ],
+  "groups": [],
+  "startDate": "2022-09-12T12:24:00.000Z",
+  "terms": [
+    {
+      "id": "317cd8f9-d66c-4f2a-8774-63c612d99cd4",
+      "roleId": "732339e7-8e30-49d7-9198-cccf9451e221"
+    }
+  ],
+  "prizeSets": [
+    {
+      "type": "placement",
+      "prizes": [
+        {
+          "type": "USD",
+          "value": 200
+        }
+      ]
+    }
+  ],
+  "discussions": [
+    {
+      "name": "test dr billing Discussion",
+      "type": "challenge",
+      "provider": "vanilla",
+      "id": "a8220333-b289-43de-931b-d1845ecd20d3"
+    }
+  ],
+  "legacy": {
+    "reviewType": "COMMUNITY",
+    "confidentialityType": "public"
+  },
+  "timelineTemplateId": "7ebf1c69-f62f-4d3a-bdfb-fe9ddb56861c",
+  "projectId": "22306",
+  "status": "Draft",
+  "attachmentIds": []
+}

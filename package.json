@@ -1,0 +1,33 @@
+{
+  "name": "project-billing-account-update-processor",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "format": "prettier-standard \"src/**/*.js\" \"test/**/*.js\" \"config/**/*.js\"",
+    "start": "node src/app.js",
+    "start:dev": "nodemon --watch src -e js src/app.js",
+    "create-test-challenges": "node scripts/create-test-challenges.js",
+    "lint": "standard \"src/**/*.js\" \"scripts/**/*.js\"",
+    "lint:fix": "standard --fix \"src/**/*.js\" \"scripts/**/*.js\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "config": "^3.3.8",
+    "dotenv": "^16.0.2",
+    "joi": "^17.6.0",
+    "lodash": "^4.17.21",
+    "no-kafka": "^3.4.3",
+    "superagent": "^8.0.0",
+    "tc-core-library-js": "github:appirio-tech/tc-core-library-js",
+    "winston": "^3.8.2",
+    "winston-timestamp-colorize": "^1.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.19",
+    "prettier-standard": "^16.4.1",
+    "standard": "^17.0.0"
+  }
+}

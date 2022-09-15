@@ -1,0 +1,28 @@
+{
+  "status": "New",
+  "projectId": "22306",
+  "name": "test dr billing new challenge",
+  "typeId": "927abff4-7af9-4145-8ba1-577c16e64e2e",
+  "trackId": "9b6fc876-f4d9-4ccb-9dfd-419247628825",
+  "startDate": "2022-09-12T17:54:56+05:30",
+  "legacy": {
+    "reviewType": "COMMUNITY"
+  },
+  "descriptionFormat": "markdown",
+  "timelineTemplateId": "7ebf1c69-f62f-4d3a-bdfb-fe9ddb56861c",
+  "terms": [
+    {
+      "id": "317cd8f9-d66c-4f2a-8774-63c612d99cd4",
+      "roleId": "732339e7-8e30-49d7-9198-cccf9451e221"
+    }
+  ],
+  "groups": [],
+  "tags": [],
+  "discussions": [
+    {
+      "name": "test dr billing Discussion",
+      "type": "challenge",
+      "provider": "vanilla"
+    }
+  ]
+}

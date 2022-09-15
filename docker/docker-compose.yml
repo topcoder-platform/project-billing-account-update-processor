@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  project-billing-account-update-processor:
+    image: project-billing-account-update-processor:latest
+    build:
+      context: ../
+      dockerfile: docker/Dockerfile
+    environment:
+      - KAFKA_URL=host.docker.internal:9092
