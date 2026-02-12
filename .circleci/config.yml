@@ -20,7 +20,7 @@ install_deploysuite: &install_deploysuite
 
 run_build: &run_build
   name: Installation of build dependencies.
-  command: ./build.sh
+  command: ./build.sh $APPNAME
 
 restore_cache_settings_for_build: &restore_cache_settings_for_build
   key: docker-node-modules-{{ checksum "package-lock.json" }}
