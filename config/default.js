@@ -8,7 +8,7 @@ module.exports = {
   KAFKA: {
     connectionString: process.env.KAFKA_URL || "localhost:9092",
   },
-  CHALLENGE_API_URL: process.env.CHALLENGE_API || "https://api.topcoder-dev.com/v5/challenges",
+  CHALLENGE_API_URL: process.env.CHALLENGE_API || "https://api.topcoder-dev.com/v6/challenges",
   AUTH: {
     AUTH0_AUDIENCE: process.env.AUTH0_AUDIENCE,
     AUTH0_CLIENT_ID: process.env.AUTH0_CLIENT_ID,
