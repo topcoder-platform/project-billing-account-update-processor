@@ -7,7 +7,7 @@ const logger = require('../utils/logger.util')
 const updateSchema = Joi.object({
   projectId: Joi.number(),
   projectName: Joi.string(),
-  directProjectId: Joi.number(),
+  directProjectId: Joi.number().allow(null),
   status: Joi.string(),
   oldBillingAccountId: Joi.string(),
   newBillingAccountId: Joi.string()
