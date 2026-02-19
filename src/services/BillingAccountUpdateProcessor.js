@@ -4,19 +4,22 @@ const { getChallenges, updateChallenge } = require('../utils/topcoder-api.util')
 const { CHALLENGE_STATUSES } = require('../constants')
 const logger = require('../utils/logger.util')
 
+const billingAccountIdSchema = Joi.alternatives().try(Joi.string(), Joi.number())
+
 const updateSchema = Joi.object({
   projectId: Joi.number(),
   projectName: Joi.string(),
   directProjectId: Joi.number().allow(null),
   status: Joi.string(),
-  oldBillingAccountId: Joi.string(),
-  newBillingAccountId: Joi.string()
+  oldBillingAccountId: billingAccountIdSchema,
+  newBillingAccountId: billingAccountIdSchema
 })
 
 async function updateBillingAccount (message) {
   const { value: payload, error } = await updateSchema.validate(message)
   if (error) { throw error }
 
+  const normalizedNewBillingAccountId = _.toString(payload.newBillingAccountId)
   logger.info(`Processing started for billing account update of project: ${payload.projectId} to billingAccountId: ${payload.newBillingAccountId}`)
   try {
     const activeChallenges = await getAllChallenges({
@@ -43,7 +46,7 @@ async function updateBillingAccount (message) {
     const challengesToUpdate = [...activeChallenges, ...draftChallenges, ...newChallenges]
     for (const c of challengesToUpdate) {
       if (_.get(c, 'billing')) {
-        if (_.get(c, 'billing.billingAccountId') !== payload.newBillingAccountId) {
+        if (_.toString(_.get(c, 'billing.billingAccountId')) !== normalizedNewBillingAccountId) {
           logger.debug(`Updating challenge: ${c.id} to billingAccountId: ${payload.newBillingAccountId}`)
           const patchObj = {
             billing: {
