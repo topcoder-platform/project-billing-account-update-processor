@@ -1,13 +1,15 @@
-# Use the base image with Node.js
-FROM node:16.15
+# Use the Node.js 22 LTS runtime on the same Debian/glibc image family.
+FROM node:22-bookworm
 
-# Copy the current directory into the Docker image
-COPY . /project-billing-account-update-processor
-
-# Set working directory for future use
 WORKDIR /project-billing-account-update-processor
 
-# Install the dependencies from package.json
-RUN npm install
+# Install the locked production dependency graph before copying application code.
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev \
+  && npm cache clean --force
 
-CMD node src/app.js
+COPY --chown=node:node . .
+
+USER node
+
+CMD ["node", "src/app.js"]

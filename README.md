@@ -12,7 +12,7 @@ This is in relation to: https://topcoder.atlassian.net/browse/PLAT-1233
 
 ## Requirements
 
-- [Node 16+](https://nodejs.org/en/)
+- [Node 22](https://nodejs.org/en/)
 - [Kafka](https://kafka.apache.org/)
 
 
@@ -56,11 +56,11 @@ Below is the description for different variables in config.
 
 ### Starting app locally
 
-- Make sure you're on node version 16+
+- Make sure you're using Node 22 (run `nvm use` if you use nvm)
 
 - Go to the repo root directory and run 
     ```
-    npm install
+    npm ci
     ```
 - After the dependencies are installed, 
     - run `npm run start:dev` to start in development mode or

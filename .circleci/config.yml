@@ -23,10 +23,10 @@ run_build: &run_build
   command: ./build.sh $APPNAME
 
 restore_cache_settings_for_build: &restore_cache_settings_for_build
-  key: docker-node-modules-{{ checksum "package-lock.json" }}
+  key: docker-node22-node-modules-{{ checksum "package-lock.json" }}
 
 save_cache_settings: &save_cache_settings
-  key: docker-node-modules-{{ checksum "package-lock.json" }}
+  key: docker-node22-node-modules-{{ checksum "package-lock.json" }}
   paths:
     - node_modules
 

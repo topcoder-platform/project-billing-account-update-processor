@@ -14,14 +14,17 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
+  "engines": {
+    "node": "22.x"
+  },
   "dependencies": {
-    "config": "^3.3.8",
+    "config": "^3.3.12",
     "dotenv": "^16.0.2",
     "joi": "^17.6.0",
     "lodash": "^4.17.21",
-    "no-kafka": "^3.4.3",
+    "no-kafka": "^3.4.4",
     "superagent": "^8.0.0",
-    "tc-core-library-js": "github:topcoder-platform/tc-core-library-js#v2.6.7",
+    "tc-core-library-js": "https://codeload.github.com/topcoder-platform/tc-core-library-js/tar.gz/323567bc50e433ae488b656f9f94e821ebaf3062",
     "winston": "^3.8.2",
     "winston-timestamp-colorize": "^1.1.0"
   },
