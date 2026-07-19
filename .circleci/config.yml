@@ -1,86 +1,108 @@
 version: 2.1
+
 defaults: &defaults
   docker:
     - image: cimg/python:3.13.2-browsers
+
+node_defaults: &node_defaults
+  docker:
+    - image: cimg/node:22.22.0
+
 install_dependency: &install_dependency
-  name: Installation of build and deployment dependencies.
+  name: Install build and deployment dependencies
   command: |
-      sudo apt update
-      sudo apt install python3-pip
-      sudo pip3 install awscli --upgrade 
+    sudo apt update
+    sudo apt install python3-pip
+    sudo pip3 install awscli --upgrade
 
 install_deploysuite: &install_deploysuite
-  name: Installation of install_deploysuite.
+  name: Install deployment suite
   command: |
     git clone --branch v1.4.17 https://github.com/topcoder-platform/tc-deploy-scripts ../buildscript
-    cp ./../buildscript/master_deploy.sh .
-    cp ./../buildscript/buildenv.sh .
-    cp ./../buildscript/awsconfiguration.sh .
+    cp ../buildscript/master_deploy.sh .
+    cp ../buildscript/buildenv.sh .
+    cp ../buildscript/awsconfiguration.sh .
     cp ../buildscript/psvar-processor.sh .
 
 run_build: &run_build
-  name: Installation of build dependencies.
-  command: ./build.sh $APPNAME
+  name: Build application image
+  command: ./build.sh "$APPNAME"
 
-restore_cache_settings_for_build: &restore_cache_settings_for_build
-  key: docker-node22-node-modules-{{ checksum "package-lock.json" }}
-
-save_cache_settings: &save_cache_settings
-  key: docker-node22-node-modules-{{ checksum "package-lock.json" }}
-  paths:
-    - node_modules
-
-builddeploy_steps: &builddeploy_steps  
-    - checkout
-    - setup_remote_docker
-    - run: *install_dependency
-    - run: *install_deploysuite
-    - restore_cache: *restore_cache_settings_for_build
-    - run: *run_build
-    - save_cache: *save_cache_settings 
-    - deploy:
-        name: Running Masterscript for Dev deploy
-        command: |
-          ./awsconfiguration.sh $DEPLOY_ENV
-          source awsenvconf
-          # ./buildenv.sh -e $DEPLOY_ENV -b ${LOGICAL_ENV}-${APPNAME}-deployvar
-          # source buildenvvar
-          # ./master_deploy.sh -d ECS -e $DEPLOY_ENV -t latest -s ${LOGICAL_ENV}-global-appvar,${LOGICAL_ENV}-${APPNAME}-appvar -i ${APPNAME} -p FARGATE  
-          ./psvar-processor.sh -t appenv -p /config/${APPNAME}/deployvar
-          source deployvar_env
-          ./master_deploy.sh -d ECS -e $DEPLOY_ENV -t latest -j /config/${APPNAME}/appvar,/config/common/global-appvar -i ${APPNAME} -p FARGATE
+builddeploy_steps: &builddeploy_steps
+  - checkout
+  - setup_remote_docker
+  - run: *install_dependency
+  - run: *install_deploysuite
+  - run: *run_build
+  - deploy:
+      name: Deploy application
+      command: |
+        ./awsconfiguration.sh "$DEPLOY_ENV"
+        source awsenvconf
+        ./psvar-processor.sh -t appenv -p "/config/${APPNAME}/deployvar"
+        source deployvar_env
+        ./master_deploy.sh -d ECS -e "$DEPLOY_ENV" -t latest -j "/config/${APPNAME}/appvar,/config/common/global-appvar" -i "$APPNAME" -p FARGATE
 
 jobs:
-  # Build & Deploy against development backend
-  "build-dev":
+  quality:
+    <<: *node_defaults
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - npm-v1-{{ arch }}-{{ checksum "package-lock.json" }}
+            - npm-v1-{{ arch }}-
+      - run:
+          name: Install locked dependencies
+          command: npm ci
+      - save_cache:
+          key: npm-v1-{{ arch }}-{{ checksum "package-lock.json" }}
+          paths:
+            - ~/.npm
+      - run:
+          name: Format, lint, and type-check
+          command: |
+            npm run format:check
+            npm run lint
+            npm run typecheck
+      - run:
+          name: Run tests
+          command: npm test
+      - run:
+          name: Compile application
+          command: npm run build
+
+  build-dev:
     <<: *defaults
     environment:
-      DEPLOY_ENV: "DEV"
-      LOGICAL_ENV: "dev"
-      APPNAME: "project-billing-account-update-processor"       
+      DEPLOY_ENV: DEV
+      LOGICAL_ENV: dev
+      APPNAME: project-billing-account-update-processor
     steps: *builddeploy_steps
 
-  "build-prod":
+  build-prod:
     <<: *defaults
     environment:
-      DEPLOY_ENV: "PROD"
-      LOGICAL_ENV: "prod"    
-      APPNAME: "project-billing-account-update-processor"  
+      DEPLOY_ENV: PROD
+      LOGICAL_ENV: prod
+      APPNAME: project-billing-account-update-processor
     steps: *builddeploy_steps
 
 workflows:
-  version: 2
   build:
     jobs:
-      # Development builds are executed on "develop" branch only.
-      - "build-dev":
+      - quality
+      - build-dev:
           context: org-global
+          requires:
+            - quality
           filters:
             branches:
               only: develop
-      - "build-prod":
+      - build-prod:
           context: org-global
+          requires:
+            - quality
           filters:
             branches:
-              only:
-                - master
+              only: master
