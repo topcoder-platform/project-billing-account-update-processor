@@ -1,10 +1,21 @@
-version: '3'
-
 services:
   project-billing-account-update-processor:
     image: project-billing-account-update-processor:latest
     build:
-      context: ../
+      context: ..
       dockerfile: docker/Dockerfile
+    env_file:
+      - path: ../.env
+        required: false
     environment:
-      - KAFKA_URL=host.docker.internal:9092
+      KAFKA_URL: kafka:19092
+    init: true
+    restart: unless-stopped
+    stop_grace_period: 2m
+    networks:
+      - processor-kafka
+
+networks:
+  processor-kafka:
+    name: tc-pbaup-network
+    external: true
