@@ -46,6 +46,11 @@ function kafkaBrokers(value: string | undefined): string[] {
   return brokers.length > 0 ? brokers : [DEFAULT_KAFKA_BROKER]
 }
 
+/** Map environment input to worker configuration, including explicit Keycloak options.
+ * @param environment Environment values (defaults to process.env).
+ * @returns Normalized configuration for Nest and the development challenge script.
+ * Does not throw; validateEnvironment and shared core enforce required auth settings.
+ */
 export function createConfiguration(
   environment: EnvironmentSource = process.env,
 ): AppConfig {
@@ -86,11 +91,15 @@ export function createConfiguration(
       optionalString(environment.CHALLENGE_API) ??
       DEFAULT_CHALLENGE_API_URL,
     auth: {
-      auth0Audience: optionalString(environment.AUTH0_AUDIENCE),
-      auth0ClientId: optionalString(environment.AUTH0_CLIENT_ID),
-      auth0ClientSecret: optionalString(environment.AUTH0_CLIENT_SECRET),
-      auth0Url: optionalString(environment.AUTH0_URL),
-      auth0ProxyServerUrl: optionalString(environment.AUTH0_PROXY_SERVER_URL),
+      M2M_PROVIDER: optionalString(environment.M2M_PROVIDER),
+      KEYCLOAK_ISSUER: optionalString(environment.KEYCLOAK_ISSUER),
+      KEYCLOAK_AUDIENCE: optionalString(environment.KEYCLOAK_AUDIENCE),
+      KEYCLOAK_TOKEN_URL: optionalString(environment.KEYCLOAK_TOKEN_URL),
+      KEYCLOAK_CLIENT_ID: optionalString(environment.KEYCLOAK_CLIENT_ID),
+      KEYCLOAK_CLIENT_SECRET: optionalString(
+        environment.KEYCLOAK_CLIENT_SECRET,
+      ),
+      KEYCLOAK_SCOPE: optionalString(environment.KEYCLOAK_SCOPE),
     },
   }
 }

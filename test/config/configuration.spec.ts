@@ -24,11 +24,13 @@ describe('createConfiguration', () => {
     assert.equal(config.kafka.reconnectDelay, 5_000)
     assert.equal(config.kafka.autocreateTopics, false)
     assert.deepEqual(config.auth, {
-      auth0Audience: undefined,
-      auth0ClientId: undefined,
-      auth0ClientSecret: undefined,
-      auth0Url: undefined,
-      auth0ProxyServerUrl: undefined,
+      M2M_PROVIDER: undefined,
+      KEYCLOAK_ISSUER: undefined,
+      KEYCLOAK_AUDIENCE: undefined,
+      KEYCLOAK_TOKEN_URL: undefined,
+      KEYCLOAK_CLIENT_ID: undefined,
+      KEYCLOAK_CLIENT_SECRET: undefined,
+      KEYCLOAK_SCOPE: undefined,
     })
   })
 
@@ -48,7 +50,7 @@ describe('createConfiguration', () => {
     )
   })
 
-  it('normalizes Kafka and optional Auth0 environment values', () => {
+  it('normalizes Kafka and optional Keycloak environment values', () => {
     const config = createConfiguration({
       KAFKA_URL: ' broker-a:9092, ,broker-b:9092 ',
       KAFKA_FROM_BEGINNING: 'true',
@@ -57,8 +59,8 @@ describe('createConfiguration', () => {
       KAFKA_HIGH_WATER_MARK: '4',
       KAFKA_RECONNECT_DELAY_MS: '7500',
       KAFKA_AUTOCREATE_TOPICS: 'true',
-      AUTH0_CLIENT_ID: ' client-id ',
-      AUTH0_CLIENT_SECRET: '',
+      KEYCLOAK_CLIENT_ID: ' client-id ',
+      KEYCLOAK_CLIENT_SECRET: '',
     })
 
     assert.deepEqual(config.kafka.brokers, ['broker-a:9092', 'broker-b:9092'])
@@ -68,7 +70,7 @@ describe('createConfiguration', () => {
     assert.equal(config.kafka.highWaterMark, 4)
     assert.equal(config.kafka.reconnectDelay, 7_500)
     assert.equal(config.kafka.autocreateTopics, true)
-    assert.equal(config.auth.auth0ClientId, 'client-id')
-    assert.equal(config.auth.auth0ClientSecret, undefined)
+    assert.equal(config.auth.KEYCLOAK_CLIENT_ID, 'client-id')
+    assert.equal(config.auth.KEYCLOAK_CLIENT_SECRET, undefined)
   })
 })

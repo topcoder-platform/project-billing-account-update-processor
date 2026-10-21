@@ -16,12 +16,16 @@ export interface KafkaConfig {
   autocreateTopics: boolean
 }
 
+/** Explicit shared-core Keycloak configuration; legacy Auth0 settings are ignored. */
 export interface AuthConfig {
-  auth0Audience?: string
-  auth0ClientId?: string
-  auth0ClientSecret?: string
-  auth0Url?: string
-  auth0ProxyServerUrl?: string
+  [setting: string]: unknown
+  M2M_PROVIDER?: string
+  KEYCLOAK_ISSUER?: string
+  KEYCLOAK_AUDIENCE?: string
+  KEYCLOAK_TOKEN_URL?: string
+  KEYCLOAK_CLIENT_ID?: string
+  KEYCLOAK_CLIENT_SECRET?: string
+  KEYCLOAK_SCOPE?: string
 }
 
 export interface AppConfig {

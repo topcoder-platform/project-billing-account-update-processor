@@ -1,9 +1,10 @@
 import { Injectable } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import request from 'superagent'
+import core from 'tc-core-library-js'
 import type { SuperAgentRequest } from 'superagent'
 
-import type { AppConfig, AuthConfig } from '../config/config.types.js'
+import type { AppConfig } from '../config/config.types.js'
 import type {
   ApiHttpMethod,
   Challenge,
@@ -12,25 +13,21 @@ import type {
   JsonObject,
 } from './challenge-api.types.js'
 
-interface MachineTokenResponse {
-  access_token?: unknown
-  error?: unknown
-  error_description?: unknown
-  expires_in?: unknown
-}
-
+/** Challenge transport for billing events. A persistent shared-core provider verifies and
+ * caches Keycloak credentials before any Challenge API request; configuration/token
+ * errors fail closed without forwarding provider response bodies or credentials. */
 @Injectable()
 export class ChallengeApiService {
   private readonly challengeApiUrl: string
-  private readonly authConfig: AuthConfig
-  private cachedToken?: { value: string; expiresAt: number }
-  private tokenRequest?: Promise<string>
+  private readonly m2m: ReturnType<typeof core.auth.m2m>
 
   constructor(private readonly configService: ConfigService<AppConfig, true>) {
     this.challengeApiUrl = this.configService.getOrThrow('challengeApiUrl', {
       infer: true,
     })
-    this.authConfig = this.configService.getOrThrow('auth', { infer: true })
+    this.m2m = core.auth.m2m(
+      this.configService.getOrThrow('auth', { infer: true }),
+    )
   }
 
   createChallenge(body: JsonObject): Promise<ChallengeApiResponse<Challenge>> {
@@ -74,113 +71,22 @@ export class ChallengeApiService {
     return `${this.challengeApiUrl}/${encodeURIComponent(challengeId)}`
   }
 
-  private async getM2MToken(): Promise<string> {
-    if (
-      this.cachedToken !== undefined &&
-      this.cachedToken.expiresAt > Date.now()
-    ) {
-      return this.cachedToken.value
-    }
-
-    if (this.tokenRequest !== undefined) return this.tokenRequest
-
-    const tokenRequest = this.requestMachineToken()
-    this.tokenRequest = tokenRequest
-
-    try {
-      return await tokenRequest
-    } finally {
-      if (this.tokenRequest === tokenRequest) this.tokenRequest = undefined
-    }
-  }
-
-  private async requestMachineToken(): Promise<string> {
-    const {
-      auth0Audience,
-      auth0ClientId,
-      auth0ClientSecret,
-      auth0ProxyServerUrl,
-      auth0Url,
-    } = this.authConfig
-
-    if (
-      auth0Url === undefined ||
-      auth0Audience === undefined ||
-      auth0ClientId === undefined ||
-      auth0ClientSecret === undefined
-    ) {
-      throw new Error(
-        'AUTH0_URL, AUTH0_AUDIENCE, AUTH0_CLIENT_ID, and AUTH0_CLIENT_SECRET are required to call the Challenge API',
-      )
-    }
-
-    const response = await request
-      .post(auth0ProxyServerUrl ?? auth0Url)
-      .set('Content-Type', 'application/json')
-      .send({
-        grant_type: 'client_credentials',
-        client_id: auth0ClientId,
-        client_secret: auth0ClientSecret,
-        auth0_url: auth0Url,
-        audience: auth0Audience,
-      })
-
-    const body = response.body as MachineTokenResponse
-    if (typeof body.access_token !== 'string' || body.access_token === '') {
-      const errorName =
-        typeof body.error === 'string'
-          ? body.error
-          : 'Auth0 did not return an access token'
-      const description =
-        typeof body.error_description === 'string'
-          ? `: ${body.error_description}`
-          : ''
-      throw new Error(`${errorName}${description}`)
-    }
-
-    this.cachedToken = {
-      value: body.access_token,
-      expiresAt: this.tokenExpiry(body.access_token, body.expires_in),
-    }
-    return body.access_token
-  }
-
-  private tokenExpiry(token: string, expiresIn: unknown): number {
-    const now = Date.now()
-    const expiryCandidates: number[] = []
-
-    if (typeof expiresIn === 'number' && expiresIn > 0) {
-      expiryCandidates.push(now + expiresIn * 1_000)
-    }
-
-    try {
-      const encodedPayload = token.split('.')[1]
-      if (encodedPayload !== undefined) {
-        const payload = JSON.parse(
-          Buffer.from(encodedPayload, 'base64url').toString('utf8'),
-        ) as { exp?: unknown }
-        if (typeof payload.exp === 'number') {
-          expiryCandidates.push(payload.exp * 1_000)
-        }
-      }
-    } catch {
-      // Opaque access tokens can still use the `expires_in` response value.
-    }
-
-    if (expiryCandidates.length === 0) return now
-    return Math.max(now, Math.min(...expiryCandidates) - 60_000)
-  }
-
+  /** Send a Challenge API request using a verified cached machine credential.
+   * @param method HTTP operation used by billing processing.
+   * @param path Absolute Challenge API endpoint.
+   * @param requestBody Optional JSON mutation body.
+   * @param queryParams Optional filter parameters.
+   * @returns The typed Challenge API response.
+   * @throws Sanitized shared-core auth errors or Challenge API transport errors.
+   */
   private async requestToApi<TBody>(
     method: ApiHttpMethod,
     path: string,
     requestBody?: JsonObject,
     queryParams: Record<string, unknown> = {},
   ): Promise<ChallengeApiResponse<TBody>> {
-    const token = await this.getM2MToken()
-    const authHeader: Record<string, string> = token
-      ? { Authorization: `Bearer ${token}` }
-      : {}
+    const token = await this.m2m.getMachineToken()
+    const authHeader = { Authorization: `Bearer ${token}` }
 
     let apiRequest = this.createRequest(method, path)
       .query(queryParams)

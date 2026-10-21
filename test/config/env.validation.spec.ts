@@ -4,25 +4,27 @@ import { describe, it } from 'node:test'
 import { validateEnvironment } from '../../src/config/env.validation.js'
 
 describe('validateEnvironment', () => {
-  it('applies Kafka defaults when required Auth0 settings are present', () => {
+  it('applies Kafka defaults when required Keycloak settings are present', () => {
     const environment = validateEnvironment({
-      AUTH0_AUDIENCE: 'https://m2m.example.com/',
-      AUTH0_CLIENT_ID: 'client-id',
-      AUTH0_CLIENT_SECRET: 'client-secret',
-      AUTH0_URL: 'https://auth.example.com/oauth/token',
+      M2M_PROVIDER: 'keycloak',
+      KEYCLOAK_ISSUER: 'https://auth.example.com/realms/m2m',
+      KEYCLOAK_AUDIENCE: 'https://m2m.example.com/',
+      KEYCLOAK_CLIENT_ID: 'client-id',
+      KEYCLOAK_CLIENT_SECRET: 'client-secret',
+      KEYCLOAK_TOKEN_URL: 'https://auth.example.com/oauth/token',
     })
 
     assert.equal(environment.KAFKA_URL, 'localhost:9092')
     assert.equal(environment.KAFKA_FROM_BEGINNING, false)
     assert.equal(environment.KAFKA_HIGH_WATER_MARK, 1)
     assert.equal(environment.KAFKA_RECONNECT_DELAY_MS, 5_000)
-    assert.equal(environment.AUTH0_CLIENT_ID, 'client-id')
+    assert.equal(environment.KEYCLOAK_CLIENT_ID, 'client-id')
   })
 
-  it('fails startup validation when Auth0 settings are missing', () => {
+  it('fails startup validation when Keycloak settings are missing', () => {
     assert.throws(
       () => validateEnvironment({}),
-      /AUTH0_AUDIENCE.*AUTH0_CLIENT_ID.*AUTH0_CLIENT_SECRET.*AUTH0_URL/,
+      /M2M_PROVIDER.*KEYCLOAK_ISSUER.*KEYCLOAK_AUDIENCE.*KEYCLOAK_TOKEN_URL.*KEYCLOAK_CLIENT_ID.*KEYCLOAK_CLIENT_SECRET/,
     )
   })
 
@@ -30,10 +32,12 @@ describe('validateEnvironment', () => {
     assert.throws(
       () =>
         validateEnvironment({
-          AUTH0_AUDIENCE: 'https://m2m.example.com/',
-          AUTH0_CLIENT_ID: 'client-id',
-          AUTH0_CLIENT_SECRET: 'client-secret',
-          AUTH0_URL: 'https://auth.example.com/oauth/token',
+          M2M_PROVIDER: 'keycloak',
+          KEYCLOAK_ISSUER: 'https://auth.example.com/realms/m2m',
+          KEYCLOAK_AUDIENCE: 'https://m2m.example.com/',
+          KEYCLOAK_CLIENT_ID: 'client-id',
+          KEYCLOAK_CLIENT_SECRET: 'client-secret',
+          KEYCLOAK_TOKEN_URL: 'https://auth.example.com/oauth/token',
           CHALLENGE_API_URL: 'not a URL',
           KAFKA_HIGH_WATER_MARK: 'zero',
         }),

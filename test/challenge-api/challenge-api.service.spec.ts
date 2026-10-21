@@ -1,4 +1,6 @@
 import assert from 'node:assert/strict'
+import { generateKeyPairSync, sign } from 'node:crypto'
+import nock from 'nock'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { describe, it } from 'node:test'
@@ -31,30 +33,72 @@ function close(server: Server): Promise<void> {
   })
 }
 
-function machineToken(): string {
-  const header = Buffer.from(JSON.stringify({ alg: 'none' })).toString(
-    'base64url',
-  )
-  const payload = Buffer.from(
-    JSON.stringify({ exp: Math.floor(Date.now() / 1_000) + 3_600 }),
+const issuer = 'https://keycloak.billing-test.example/realms/m2m'
+const clientId = 'billing-worker'
+const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+  modulusLength: 2048,
+})
+const jwk = {
+  ...publicKey.export({ format: 'jwk' }),
+  kid: 'test',
+  alg: 'RS256',
+  use: 'sig',
+}
+const auth = {
+  M2M_PROVIDER: 'keycloak',
+  KEYCLOAK_ISSUER: issuer,
+  KEYCLOAK_AUDIENCE: 'https://api.test.example',
+  KEYCLOAK_TOKEN_URL: 'https://keycloak.billing-test.example/m2m/token',
+  KEYCLOAK_CLIENT_ID: clientId,
+  KEYCLOAK_CLIENT_SECRET: 'synthetic-secret',
+  KEYCLOAK_SCOPE: 'read:challenges update:challenges',
+}
+
+/** Sign a synthetic service fixture with optional claim changes; returns JWT text. */
+function machineToken(overrides: Record<string, unknown> = {}): string {
+  const now = Math.floor(Date.now() / 1000)
+  const header = Buffer.from(
+    JSON.stringify({ alg: 'RS256', kid: 'test' }),
   ).toString('base64url')
-  return `${header}.${payload}.signature`
+  const payload = Buffer.from(
+    JSON.stringify({
+      iss: issuer,
+      aud: auth.KEYCLOAK_AUDIENCE,
+      sub: 'service-account-billing',
+      azp: clientId,
+      gty: 'client-credentials',
+      iat: now,
+      exp: now + 900,
+      scope: auth.KEYCLOAK_SCOPE,
+      ...overrides,
+    }),
+  ).toString('base64url')
+  const input = `${header}.${payload}`
+  return `${input}.${sign('RSA-SHA256', Buffer.from(input), privateKey).toString('base64url')}`
+}
+
+/** Mock the HTTPS managed issuer and trusted JWKS endpoint; returns required mocks. */
+function mockIssuer(token: string) {
+  const endpoint = nock('https://keycloak.billing-test.example')
+    .post(
+      '/m2m/token',
+      (body) =>
+        body.client_id === clientId && body.grant_type === 'client_credentials',
+    )
+    .reply(200, { access_token: token, expires_in: 900 })
+  nock(issuer)
+    .get('/protocol/openid-connect/certs')
+    .reply(200, { keys: [jwk] })
+  return endpoint
 }
 
 describe('ChallengeApiService', () => {
   it('fetches and caches M2M auth before sending a JSON PATCH', async () => {
-    let authRequests = 0
     const received: ReceivedRequest = {}
     const token = machineToken()
+    const endpoint = mockIssuer(token)
 
     const server = createServer((request, response) => {
-      if (request.url === '/oauth/token') {
-        authRequests += 1
-        response.writeHead(200, { 'content-type': 'application/json' })
-        response.end(JSON.stringify({ access_token: token }))
-        return
-      }
-
       const chunks: Buffer[] = []
       request.on('data', (chunk: Buffer) => chunks.push(chunk))
       request.on('end', () => {
@@ -92,13 +136,7 @@ describe('ChallengeApiService', () => {
         autocreateTopics: false,
       },
       challengeApiUrl: `${baseUrl}/v6/challenges`,
-      auth: {
-        auth0Audience: 'https://m2m.example.com/',
-        auth0Url: `${baseUrl}/oauth/token`,
-        auth0ProxyServerUrl: `${baseUrl}/oauth/token`,
-        auth0ClientId: `challenge-api-test-${Date.now()}`,
-        auth0ClientSecret: 'secret',
-      },
+      auth,
     }
     const configService = {
       getOrThrow: (key: keyof AppConfig) => appConfig[key],
@@ -106,7 +144,7 @@ describe('ChallengeApiService', () => {
 
     try {
       const service = new ChallengeApiService(configService)
-      assert.equal(authRequests, 0)
+      assert.equal(endpoint.isDone(), false)
 
       const apiResponse = await service.updateChallenge('challenge-id', {
         billing: { billingAccountId: 80000069, markup: 0.5 },
@@ -115,7 +153,7 @@ describe('ChallengeApiService', () => {
         billing: { billingAccountId: 80000069, markup: 0.5 },
       })
 
-      assert.equal(authRequests, 1)
+      assert.equal(endpoint.isDone(), true)
       assert.equal(received.method, 'PATCH')
       assert.equal(received.url, '/v6/challenges/challenge-id')
       assert.equal(received.authorization, `Bearer ${token}`)
@@ -126,6 +164,26 @@ describe('ChallengeApiService', () => {
       assert.equal(apiResponse.body.id, 'challenge-id')
     } finally {
       await close(server)
+      nock.cleanAll()
+    }
+  })
+
+  it('rejects wrong-audience and member-shaped tokens before Challenge transport', async () => {
+    for (const overrides of [
+      { aud: 'wrong-api' },
+      { roles: ['administrator'], userId: 123 },
+    ]) {
+      mockIssuer(machineToken(overrides))
+      const config = {
+        getOrThrow: (key: string) =>
+          key === 'auth' ? auth : 'http://127.0.0.1:1/challenges',
+      } as unknown as ConfigService<AppConfig, true>
+      const service = new ChallengeApiService(config)
+      await assert.rejects(
+        service.updateChallenge('id', {}),
+        /^Error: Keycloak M2M token request failed$/,
+      )
+      nock.cleanAll()
     }
   })
 })

@@ -34,13 +34,26 @@ export const environmentSchema = Joi.object({
     .default(false),
   CHALLENGE_API_URL: Joi.string().trim().uri().empty(''),
   CHALLENGE_API: Joi.string().trim().uri().empty(''),
-  AUTH0_AUDIENCE: Joi.string().trim().min(1).required(),
-  AUTH0_CLIENT_ID: Joi.string().trim().min(1).required(),
-  AUTH0_CLIENT_SECRET: Joi.string().trim().min(1).required(),
-  AUTH0_URL: Joi.string().trim().uri().required(),
-  AUTH0_PROXY_SERVER_URL: Joi.string().trim().uri().empty(''),
+  M2M_PROVIDER: Joi.string().valid('keycloak').required(),
+  KEYCLOAK_ISSUER: Joi.string()
+    .trim()
+    .uri({ scheme: ['https'] })
+    .required(),
+  KEYCLOAK_AUDIENCE: Joi.string().trim().min(1).required(),
+  KEYCLOAK_TOKEN_URL: Joi.string()
+    .trim()
+    .uri({ scheme: ['https'] })
+    .required(),
+  KEYCLOAK_CLIENT_ID: Joi.string().trim().min(1).required(),
+  KEYCLOAK_CLIENT_SECRET: Joi.string().trim().min(1).required(),
+  KEYCLOAK_SCOPE: Joi.string().trim().empty(''),
 }).unknown(true)
 
+/** Validate startup configuration, requiring HTTPS Keycloak issuance and credentials.
+ * @param environment Untrusted environment settings loaded by Nest.
+ * @returns Validated settings with Kafka defaults.
+ * @throws Error listing invalid configuration fields; no credentials are included.
+ */
 export function validateEnvironment(
   environment: Record<string, unknown>,
 ): Record<string, unknown> {

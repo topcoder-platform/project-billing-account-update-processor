@@ -47,11 +47,13 @@ cp sample.env .env
 | `KAFKA_HIGH_WATER_MARK` | Maximum number of messages buffered by the consumer stream | `1` |
 | `KAFKA_RECONNECT_DELAY_MS` | Delay before recreating a terminal consumer stream, in milliseconds | `5000` |
 | `KAFKA_AUTOCREATE_TOPICS` | Allow the client to create missing topics | `false` |
-| `AUTH0_URL` | Topcoder Auth0 URL | Required |
-| `AUTH0_AUDIENCE` | Topcoder Auth0 audience | Required |
-| `AUTH0_CLIENT_ID` | Topcoder Auth0 client ID | Required |
-| `AUTH0_CLIENT_SECRET` | Topcoder Auth0 client secret | Required |
-| `AUTH0_PROXY_SERVER_URL` | Optional Topcoder Auth0 proxy URL | Empty |
+| `M2M_PROVIDER` | Must be `keycloak` | Required |
+| `KEYCLOAK_ISSUER` | HTTPS M2M realm issuer | Required |
+| `KEYCLOAK_AUDIENCE` | Intended API audience | Required |
+| `KEYCLOAK_TOKEN_URL` | Managed HTTPS token endpoint | Required |
+| `KEYCLOAK_CLIENT_ID` | Dedicated worker client ID | Required |
+| `KEYCLOAK_CLIENT_SECRET` | Dedicated worker secret | Required |
+| `KEYCLOAK_SCOPE` | Requested granted scopes | Optional |
 | `CHALLENGE_API_URL` | Challenge API base URL | `https://api.topcoder-dev.com/v6/challenges` |
 
 Keep `KAFKA_GROUP_ID` stable between deployments so the worker resumes from its
@@ -144,3 +146,17 @@ Use `npm run lint:fix` to apply supported automatic lint fixes.
 See [Validation.md](Validation.md) for the manual end-to-end validation flow.
 That flow updates real challenges in the Topcoder development environment, so
 use a dedicated test project and credentials.
+
+## Keycloak migration branch
+
+`keycloak_m2M` pins `tc-core-library-js` 4.0.0-keycloak.0 to commit
+`c262f4aca971904f308085bdeaaed35cdf3cfa7d`. The worker uses one shared-core
+provider for verified RS256 issuance and cache management. Tokens must match the
+issuer, audience, client and requested scopes; invalid responses fail before a
+Challenge API request. There is no Auth0 issuance fallback or proxy path.
+
+Grant `read:challenges update:challenges` for billing updates. The optional
+`create-test-challenges` script additionally needs `create:challenges` and writes
+real challenge data; do not run it as an authentication check. Configure the
+Keycloak settings in this worker's deployment secrets before any future rollout.
+CI deployment remains restricted to develop/master; this branch is not deployed.
