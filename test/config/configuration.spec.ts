@@ -24,7 +24,12 @@ describe('createConfiguration', () => {
     assert.equal(config.kafka.reconnectDelay, 5_000)
     assert.equal(config.kafka.autocreateTopics, false)
     assert.deepEqual(config.auth, {
-      M2M_PROVIDER: undefined,
+      USE_KEYCLOAK: undefined,
+      AUTH0_URL: undefined,
+      AUTH0_AUDIENCE: undefined,
+      AUTH0_CLIENT_ID: undefined,
+      AUTH0_CLIENT_SECRET: undefined,
+      AUTH0_PROXY_SERVER_URL: undefined,
       KEYCLOAK_ISSUER: undefined,
       KEYCLOAK_AUDIENCE: undefined,
       KEYCLOAK_TOKEN_URL: undefined,
@@ -72,5 +77,23 @@ describe('createConfiguration', () => {
     assert.equal(config.kafka.autocreateTopics, true)
     assert.equal(config.auth.KEYCLOAK_CLIENT_ID, 'client-id')
     assert.equal(config.auth.KEYCLOAK_CLIENT_SECRET, undefined)
+  })
+
+  it('passes USE_KEYCLOAK and the Auth0 settings to the M2M provider options', () => {
+    const config = createConfiguration({
+      USE_KEYCLOAK: ' false ',
+      AUTH0_URL: ' https://tenant.example/oauth/token ',
+      AUTH0_AUDIENCE: 'https://m2m.example.com/',
+      AUTH0_CLIENT_ID: 'auth0-client',
+      AUTH0_CLIENT_SECRET: 'auth0-secret',
+      AUTH0_PROXY_SERVER_URL: '',
+    })
+
+    assert.equal(config.auth.USE_KEYCLOAK, 'false')
+    assert.equal(config.auth.AUTH0_URL, 'https://tenant.example/oauth/token')
+    assert.equal(config.auth.AUTH0_AUDIENCE, 'https://m2m.example.com/')
+    assert.equal(config.auth.AUTH0_CLIENT_ID, 'auth0-client')
+    assert.equal(config.auth.AUTH0_CLIENT_SECRET, 'auth0-secret')
+    assert.equal(config.auth.AUTH0_PROXY_SERVER_URL, undefined)
   })
 })

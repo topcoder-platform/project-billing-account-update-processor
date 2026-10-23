@@ -13,9 +13,14 @@ import type {
   JsonObject,
 } from './challenge-api.types.js'
 
-/** Challenge transport for billing events. A persistent shared-core provider verifies and
- * caches Keycloak credentials before any Challenge API request; configuration/token
- * errors fail closed without forwarding provider response bodies or credentials. */
+/** Challenge transport for billing events. A persistent shared-core provider obtains and
+ * caches the M2M token before any Challenge API request. The `auth` config's
+ * `USE_KEYCLOAK` selects the provider: `true` uses verified Keycloak tokens
+ * (`KEYCLOAK_*`); unset or `false` uses Auth0 (`AUTH0_URL`, `AUTH0_AUDIENCE`,
+ * `AUTH0_PROXY_SERVER_URL`, `AUTH0_CLIENT_ID`, `AUTH0_CLIENT_SECRET`), as before the
+ * migration. Configuration/token errors fail closed without forwarding provider
+ * response bodies or credentials. Used by the billing account update handler and the
+ * development challenge script. */
 @Injectable()
 export class ChallengeApiService {
   private readonly challengeApiUrl: string
@@ -71,7 +76,7 @@ export class ChallengeApiService {
     return `${this.challengeApiUrl}/${encodeURIComponent(challengeId)}`
   }
 
-  /** Send a Challenge API request using a verified cached machine credential.
+  /** Send a Challenge API request using the active provider's cached machine token.
    * @param method HTTP operation used by billing processing.
    * @param path Absolute Challenge API endpoint.
    * @param requestBody Optional JSON mutation body.

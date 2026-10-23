@@ -47,13 +47,18 @@ cp sample.env .env
 | `KAFKA_HIGH_WATER_MARK` | Maximum number of messages buffered by the consumer stream | `1` |
 | `KAFKA_RECONNECT_DELAY_MS` | Delay before recreating a terminal consumer stream, in milliseconds | `5000` |
 | `KAFKA_AUTOCREATE_TOPICS` | Allow the client to create missing topics | `false` |
-| `M2M_PROVIDER` | Must be `keycloak` | Required |
-| `KEYCLOAK_ISSUER` | HTTPS M2M realm issuer | Required |
-| `KEYCLOAK_AUDIENCE` | Intended API audience | Required |
-| `KEYCLOAK_TOKEN_URL` | Managed HTTPS token endpoint | Required |
-| `KEYCLOAK_CLIENT_ID` | Dedicated worker client ID | Required |
-| `KEYCLOAK_CLIENT_SECRET` | Dedicated worker secret | Required |
-| `KEYCLOAK_SCOPE` | Requested granted scopes | Optional |
+| `USE_KEYCLOAK` | `true` gets M2M tokens from Keycloak; unset or `false` uses Auth0 | Auth0 |
+| `AUTH0_URL` | Topcoder Auth0 URL | Required unless `USE_KEYCLOAK=true` |
+| `AUTH0_AUDIENCE` | Topcoder Auth0 audience | Required unless `USE_KEYCLOAK=true` |
+| `AUTH0_CLIENT_ID` | Topcoder Auth0 client ID | Required unless `USE_KEYCLOAK=true` |
+| `AUTH0_CLIENT_SECRET` | Topcoder Auth0 client secret | Required unless `USE_KEYCLOAK=true` |
+| `AUTH0_PROXY_SERVER_URL` | Optional Topcoder Auth0 proxy URL | `AUTH0_URL` |
+| `KEYCLOAK_ISSUER` | HTTPS M2M realm issuer | Required when `USE_KEYCLOAK=true` |
+| `KEYCLOAK_AUDIENCE` | Intended API audience | Required when `USE_KEYCLOAK=true` |
+| `KEYCLOAK_TOKEN_URL` | Managed HTTPS token endpoint | Required when `USE_KEYCLOAK=true` |
+| `KEYCLOAK_CLIENT_ID` | Dedicated worker client ID | Required when `USE_KEYCLOAK=true` |
+| `KEYCLOAK_CLIENT_SECRET` | Dedicated worker secret | Required when `USE_KEYCLOAK=true` |
+| `KEYCLOAK_SCOPE` | Requested granted scopes (Keycloak only) | Optional |
 | `CHALLENGE_API_URL` | Challenge API base URL | `https://api.topcoder-dev.com/v6/challenges` |
 
 Keep `KAFKA_GROUP_ID` stable between deployments so the worker resumes from its
@@ -149,11 +154,36 @@ use a dedicated test project and credentials.
 
 ## Keycloak migration branch
 
-`keycloak_m2M` pins `tc-core-library-js` 4.0.0-keycloak.0 to commit
-`c262f4aca971904f308085bdeaaed35cdf3cfa7d`. The worker uses one shared-core
-provider for verified RS256 issuance and cache management. Tokens must match the
-issuer, audience, client and requested scopes; invalid responses fail before a
-Challenge API request. There is no Auth0 issuance fallback or proxy path.
+`keycloak_m2M` pins `tc-core-library-js` 4.0.0-keycloak.1 to commit
+`e844764e1c2cadcc01fd5e05029590319802af09`. The worker uses one shared-core
+provider for token issuance and cache management.
+
+### Provider switch: `USE_KEYCLOAK`
+
+`USE_KEYCLOAK=true` makes the worker get its Challenge API M2M tokens from
+Keycloak, using `KEYCLOAK_TOKEN_URL`, `KEYCLOAK_AUDIENCE`, `KEYCLOAK_CLIENT_ID`
+and `KEYCLOAK_CLIENT_SECRET` (optional `KEYCLOAK_SCOPE` narrows the client's
+defaults). `KEYCLOAK_ISSUER` is also required, and startup validation requires
+all of these. Tokens must match the issuer, audience, client and requested
+scopes; invalid responses fail before a Challenge API request.
+
+Unset or `false` restores the Auth0 behaviour from before the migration:
+startup validation requires `AUTH0_URL`, `AUTH0_AUDIENCE`, `AUTH0_CLIENT_ID` and
+`AUTH0_CLIENT_SECRET` (and no Keycloak setting), and tokens are requested from
+`AUTH0_PROXY_SERVER_URL` (default `AUTH0_URL`) with those settings.
+
+`tc-core-library-js` reads the flag (`auth.useKeycloak`): `validateEnvironment`
+uses it to choose the required settings, and `ChallengeApiService` passes the
+`auth` config (which carries `USE_KEYCLOAK`) to `auth.m2m`, so the worker and the
+core always agree. Any value other than `true`/`false` fails at startup. In DEV
+the flag is `/config/common/global-appvar/USE_KEYCLOAK`; the CircleCI deploy
+loads `/config/project-billing-account-update-processor/appvar` and
+`/config/common/global-appvar`.
+
+**Rollback:** set `USE_KEYCLOAK=false` and force a new deployment so tasks
+re-read SSM. No code or dependency change is needed. Keep the Auth0 settings
+above in SSM until Keycloak has been accepted. The core never retries a failed
+Keycloak request against Auth0; rolling back is always this explicit change.
 
 Grant `read:challenges update:challenges` for billing updates. The optional
 `create-test-challenges` script additionally needs `create:challenges` and writes

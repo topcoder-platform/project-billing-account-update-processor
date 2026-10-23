@@ -46,7 +46,9 @@ function kafkaBrokers(value: string | undefined): string[] {
   return brokers.length > 0 ? brokers : [DEFAULT_KAFKA_BROKER]
 }
 
-/** Map environment input to worker configuration, including explicit Keycloak options.
+/** Map environment input to worker configuration, including the M2M provider options.
+ * `auth` carries `USE_KEYCLOAK` plus both the Auth0 (`AUTH0_*`) and Keycloak
+ * (`KEYCLOAK_*`) settings; `tc-core-library-js` uses the set `USE_KEYCLOAK` selects.
  * @param environment Environment values (defaults to process.env).
  * @returns Normalized configuration for Nest and the development challenge script.
  * Does not throw; validateEnvironment and shared core enforce required auth settings.
@@ -91,7 +93,14 @@ export function createConfiguration(
       optionalString(environment.CHALLENGE_API) ??
       DEFAULT_CHALLENGE_API_URL,
     auth: {
-      M2M_PROVIDER: optionalString(environment.M2M_PROVIDER),
+      USE_KEYCLOAK: optionalString(environment.USE_KEYCLOAK),
+      AUTH0_URL: optionalString(environment.AUTH0_URL),
+      AUTH0_AUDIENCE: optionalString(environment.AUTH0_AUDIENCE),
+      AUTH0_CLIENT_ID: optionalString(environment.AUTH0_CLIENT_ID),
+      AUTH0_CLIENT_SECRET: optionalString(environment.AUTH0_CLIENT_SECRET),
+      AUTH0_PROXY_SERVER_URL: optionalString(
+        environment.AUTH0_PROXY_SERVER_URL,
+      ),
       KEYCLOAK_ISSUER: optionalString(environment.KEYCLOAK_ISSUER),
       KEYCLOAK_AUDIENCE: optionalString(environment.KEYCLOAK_AUDIENCE),
       KEYCLOAK_TOKEN_URL: optionalString(environment.KEYCLOAK_TOKEN_URL),

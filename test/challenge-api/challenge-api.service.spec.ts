@@ -44,8 +44,13 @@ const jwk = {
   alg: 'RS256',
   use: 'sig',
 }
+// USE_KEYCLOAK=true: the unreachable Auth0 settings must be ignored.
 const auth = {
-  M2M_PROVIDER: 'keycloak',
+  USE_KEYCLOAK: 'true',
+  AUTH0_URL: 'https://auth0.billing-test.example/oauth/token',
+  AUTH0_AUDIENCE: 'https://m2m.example.com/',
+  AUTH0_CLIENT_ID: 'auth0-billing-worker',
+  AUTH0_CLIENT_SECRET: 'auth0-secret',
   KEYCLOAK_ISSUER: issuer,
   KEYCLOAK_AUDIENCE: 'https://api.test.example',
   KEYCLOAK_TOKEN_URL: 'https://keycloak.billing-test.example/m2m/token',
@@ -92,7 +97,86 @@ function mockIssuer(token: string) {
   return endpoint
 }
 
+/** Build the worker config used by ChallengeApiService; returns a ConfigService stub. */
+function configFor(
+  challengeApiUrl: string,
+  authConfig: AppConfig['auth'],
+): ConfigService<AppConfig, true> {
+  const values = { challengeApiUrl, auth: authConfig }
+  return {
+    getOrThrow: (key: 'challengeApiUrl' | 'auth') => values[key],
+  } as unknown as ConfigService<AppConfig, true>
+}
+
+/** Unsigned JWT-shaped Auth0 fixture with an expiry, so the core caches it. */
+function auth0Token(): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'none' })).toString(
+    'base64url',
+  )
+  const payload = Buffer.from(
+    JSON.stringify({ exp: Math.floor(Date.now() / 1_000) + 3_600 }),
+  ).toString('base64url')
+  return `${header}.${payload}.signature`
+}
+
 describe('ChallengeApiService', () => {
+  for (const [name, flag] of [
+    ['unset', {}],
+    ['false', { USE_KEYCLOAK: 'false' }],
+  ] as const) {
+    it(`requests and caches an Auth0 token when USE_KEYCLOAK is ${name}`, async () => {
+      const token = auth0Token()
+      const tokenRequests: unknown[] = []
+      let authorization: string | undefined
+      const server = createServer((request, response) => {
+        const chunks: Buffer[] = []
+        request.on('data', (chunk: Buffer) => chunks.push(chunk))
+        request.on('end', () => {
+          response.writeHead(200, { 'content-type': 'application/json' })
+          if (request.url === '/proxy/token') {
+            tokenRequests.push(
+              JSON.parse(Buffer.concat(chunks).toString('utf8')),
+            )
+            response.end(JSON.stringify({ access_token: token }))
+            return
+          }
+          authorization = request.headers.authorization
+          response.end(JSON.stringify({ id: 'challenge-id' }))
+        })
+      })
+      const baseUrl = `http://127.0.0.1:${await listen(server)}`
+      const clientId = `auth0-billing-${name}-${Date.now()}`
+      const service = new ChallengeApiService(
+        configFor(`${baseUrl}/v6/challenges`, {
+          ...auth,
+          USE_KEYCLOAK: undefined,
+          ...flag,
+          AUTH0_URL: `${baseUrl}/oauth/token`,
+          AUTH0_PROXY_SERVER_URL: `${baseUrl}/proxy/token`,
+          AUTH0_CLIENT_ID: clientId,
+        }),
+      )
+
+      try {
+        await service.updateChallenge('challenge-id', {})
+        await service.updateChallenge('challenge-id', {})
+
+        assert.deepEqual(tokenRequests, [
+          {
+            grant_type: 'client_credentials',
+            client_id: clientId,
+            client_secret: 'auth0-secret',
+            auth0_url: `${baseUrl}/oauth/token`,
+            audience: 'https://m2m.example.com/',
+          },
+        ])
+        assert.equal(authorization, `Bearer ${token}`)
+      } finally {
+        await close(server)
+      }
+    })
+  }
+
   it('fetches and caches M2M auth before sending a JSON PATCH', async () => {
     const received: ReceivedRequest = {}
     const token = machineToken()
