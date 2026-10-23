@@ -154,8 +154,8 @@ use a dedicated test project and credentials.
 
 ## Keycloak migration branch
 
-`keycloak_m2M` pins `tc-core-library-js` 4.0.0-keycloak.1 to commit
-`e844764e1c2cadcc01fd5e05029590319802af09`. The worker uses one shared-core
+`keycloak_m2M` pins `tc-core-library-js` 4.0.0-keycloak.2 to commit
+`112d54a3ed66423e7305e94e174937823e76124e`. The worker uses one shared-core
 provider for token issuance and cache management.
 
 ### Provider switch: `USE_KEYCLOAK`
