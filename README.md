@@ -16,7 +16,7 @@ sequentially and their offsets are committed after processing completes.
 
 ## Requirements
 
-- [Node.js 22.22.0 or newer in the Node 22 release line](https://nodejs.org/en/)
+- [Node.js 24.22.2 or newer in the Node 24 release line](https://nodejs.org/en/)
 - [Apache Kafka](https://kafka.apache.org/) 3.5 through 4.2
 - Docker with Docker Compose 2.24 or newer for the container workflow
 
@@ -144,3 +144,10 @@ Use `npm run lint:fix` to apply supported automatic lint fixes.
 See [Validation.md](Validation.md) for the manual end-to-end validation flow.
 That flow updates real challenges in the Topcoder development environment, so
 use a dedicated test project and credentials.
+
+## November 2026 dependency refresh
+
+Node 24.22.2 and the Alpine 3.24 runtime replace the older Debian/Node 22
+container. The full dependency graph uses patched Joi, ESLint, minimatch,
+brace-expansion, fast-uri and qs releases. Docker builds run `npm run check`
+before packaging the non-root runtime, which excludes npm and Yarn.

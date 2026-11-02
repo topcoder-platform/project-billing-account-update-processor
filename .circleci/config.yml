@@ -6,7 +6,7 @@ defaults: &defaults
 
 node_defaults: &node_defaults
   docker:
-    - image: cimg/node:22.22.0
+    - image: cimg/node:24.22.2
 
 install_dependency: &install_dependency
   name: Install build and deployment dependencies
