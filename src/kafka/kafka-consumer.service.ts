@@ -33,6 +33,15 @@ export class KafkaConsumerService
   private shuttingDown = false
   private readonly closingStreams = new WeakSet<object>()
 
+  isReady(): boolean {
+    return (
+      !this.shuttingDown &&
+      this.stream !== undefined &&
+      !this.stream.closed &&
+      !this.stream.destroyed
+    )
+  }
+
   constructor(
     configService: ConfigService<AppConfig, true>,
     private readonly billingAccountUpdateService: BillingAccountUpdateService,
