@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "environment": "dev",
+  "accountId": "811668436784",
+  "region": "us-east-1",
+  "deployRoleArn": "arn:aws:iam::811668436784:role/project-billing-account-update-processor-dev-deploy",
+  "taskRoleArn": null,
+  "executionRoleArn": "arn:aws:iam::811668436784:role/ecsTaskExecutionRole",
+  "cluster": "tc-billing-account-serverless",
+  "service": "project-billing-account-update-processor",
+  "taskFamily": "project-billing-account-update-processor",
+  "circleciOrgId": "947bef5e-1669-415d-b83c-4fc85155b7df",
+  "circleciProjectId": "f4863294-364c-405b-90b6-e9ee0165122c",
+  "repository": "github.com/topcoder-platform/project-billing-account-update-processor",
+  "branch": "develop",
+  "images": {
+    "project-billing-account-update-processor": "project-billing-account-update-processor"
+  }
+}

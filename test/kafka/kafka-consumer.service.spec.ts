@@ -166,6 +166,23 @@ void describe('Kafka event parsing', () => {
 })
 
 void describe('KafkaConsumerService', () => {
+  void it('reports ready only while a processing stream is active', async () => {
+    const stream = new FakeStream([])
+    const consumer = fakeConsumer([stream], {
+      consumeOptions: [],
+      closeArguments: [],
+    })
+    const service = createService(consumer, {} as BillingAccountUpdateService)
+    assert.equal(service.isReady(), false)
+    await service.onApplicationBootstrap()
+    assert.equal(service.isReady(), true)
+    stream.destroyed = true
+    assert.equal(service.isReady(), false)
+    stream.destroyed = false
+    await service.onApplicationShutdown()
+    assert.equal(service.isReady(), false)
+  })
+
   void it('uses committed offsets, processes globally in sequence, and commits afterward', async () => {
     const finished = deferred()
     const processingOrder: number[] = []
