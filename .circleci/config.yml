@@ -74,7 +74,7 @@ jobs:
         no_output_timeout: 45m
   quality:
     docker:
-    - image: cimg/node@sha256:2c1320ee6a256628f698938038700911276310d40cc9887cfc8f66ec0daa4343
+    - image: cimg/node:26.13.1@sha256:a39bdc3768d19a96b3b8bbf7a31f50cea3b76e81c3071d0112c2186b4d6e4d1c
     steps:
     - checkout-source
     - restore_cache:
